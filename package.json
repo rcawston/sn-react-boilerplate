@@ -5,8 +5,9 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "postbuild": "node scripts/rename-postbuild.js && node scripts/servicenow-postbuild.js",
-    "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
+    "postbuild": "node scripts/servicenow-postbuild.js",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "tailwind": "npx tailwindcss -i ./src/input.css -o ./src/index.css --watch"
   },
   "dependencies": {
     "react": "^19.0.0",
