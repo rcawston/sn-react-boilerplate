@@ -7,19 +7,29 @@ module.exports = {
     entry: './src/index.tsx',
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: `${JS_API_PATH}[name]-[fullhash]-js`,
-        chunkFilename: `${JS_API_PATH}[name]-[chunkhash]-js`,
-        assetModuleFilename: `${ASSETS_API_PATH}[name]-[hash][ext][query]`,
+        filename: `${JS_API_PATH}[name]-[contenthash].js`,
+        chunkFilename: `${JS_API_PATH}[name]-[chunkhash]-chunk.js`,
+        publicPath: '/',
+        clean: true,
     },
     resolve: {
-        extensions: ['.tsx', '.ts', '.js'],
+        extensions: ['.tsx', '.ts', '.js', '.jsx'],
     },
     module: {
         rules: [
-            {
-                test: /\.(ts|tsx)$/,
-                use: 'babel-loader',
+            { //
+                test: /\.(ts|tsx|js|jsx)$/,
                 exclude: /node_modules/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        presets: [
+                            '@babel/preset-env',
+                            '@babel/preset-react',
+                            '@babel/preset-typescript',
+                        ],
+                    },
+                },
             },
             {
                 test: /\.css$/,
@@ -29,12 +39,15 @@ module.exports = {
                 test: /\.(png|jpg|gif)$/i,
                 type: 'asset/resource',
                 generator: {
-                    filename: `${IMG_API_PATH}[name]-[hash][ext][query]`
+                    filename: `${IMG_API_PATH}[name]-[hash][ext]`
                 }
             },
             {
                 test: /\.(woff|woff2|eot|ttf|otf)$/i,
                 type: 'asset/resource',
+                generator: {
+                    filename: `${ASSETS_API_PATH}[name]-[hash][ext]`
+                }
             },
             {
                 test: /\.svg$/,
@@ -44,19 +57,42 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: './src/index.html',
+            template: './public/index.html',
+            inject: true,
+            minify: {
+                removeComments: true,
+                collapseWhitespace: true,
+                removeRedundantAttributes: true,
+                useShortDoctype: true,
+                removeEmptyAttributes: true,
+                removeStyleLinkTypeAttributes: true,
+                keepClosingSlash: true,
+                minifyJS: false,
+                minifyCSS: true,
+                minifyURLs: true,
+            },
         }),
         new MiniCssExtractPlugin({
             filename: `${ASSETS_API_PATH}[name]-[contenthash].css`,
             chunkFilename: `${ASSETS_API_PATH}[id]-[contenthash].css`,
         }),
     ],
+    optimization: {
+        splitChunks: {
+            chunks: 'all',
+            minChunks: 1,
+            name: 'vendor'
+        }
+    },
     devServer: {
         static: {
             directory: path.join(__dirname, 'public'),
         },
         compress: true,
         port: 3000,
+        hot: true,
+        open: true,
+        historyApiFallback: true,
         proxy: {
             '/api': {
                 target: SERVICENOW_INSTANCE,

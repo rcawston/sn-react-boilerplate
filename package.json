@@ -5,7 +5,7 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "postbuild": "node scripts/servicenow-postbuild.js",
+    "postbuild": "node scripts/rename-postbuild.js && node scripts/servicenow-postbuild.js",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
