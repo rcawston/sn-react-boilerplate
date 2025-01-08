@@ -25,6 +25,16 @@ function injectDocTypeHandling() {
   </g2:no_escape>`;
 }
 
+function injectMetaTags(metaTags) {
+    const escapedMetaTags = metaTags.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `    <g:evaluate>
+      var metaTags = '${escapedMetaTags}';
+    </g:evaluate>
+    <g2:no_escape>
+      $[metaTags]
+    </g2:no_escape>`;
+}
+
 function injectCloseTagHandling() {
     return `  <g:evaluate>
     var closeTag = '&lt;/html&gt;';
@@ -36,15 +46,10 @@ function injectCloseTagHandling() {
 
 function injectAuthLogic() {
     return `    <!-- handle security token for API requests -->
-    <div style="display:none">
       <g:evaluate object="true">
         var session = gs.getSession(); var token = session.getSessionToken(); if
         (token=='' || token==undefined) token = gs.getSessionToken();
       </g:evaluate>
-    </div>
-    <script>
-      window.servicenowUserToken = '$[token]'
-    </script>
     <!-- handle security token for API requests -->`;
 }
 
@@ -54,18 +59,35 @@ function modifyIndexHtml() {
     // Extract head, body content, and script tags
     const headContent = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)[1];
     const bodyContent = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)[1];
-    const scriptTags = (html.match(/<script[\s\S]*?<\/script>/gi) || []).map(tag =>
-      tag.replace('<script', '<script type="text/javascript"')
-    );
+
+    // Extract all script tags
+    const allScriptTags = html.match(/<script[\s\S]*?<\/script>/gi) || [];
+
+    // Separate security token script from other scripts
+    const securityTokenScript = allScriptTags.find(script => script.includes('window.servicenowUserToken'));
+    const otherScriptTags = allScriptTags.filter(script => !script.includes('window.servicenowUserToken'))
+      .map(tag => tag.replace('<script', '<script type="text/javascript"'));
+
+    // Extract meta tags
+    const metaTags = headContent.match(/<meta[^>]*>/gi) || [];
+    const metaTagsString = metaTags.join('');
+
+    // Remove meta tags and script tags from head content
+    let headContentCleaned = headContent.replace(/<meta[^>]*>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '').trim();
 
     // Construct new HTML structure
     let newHtml = injectDocTypeHandling();
     newHtml += '\n  <head>\n';
-    newHtml += headContent.replace(/<script[\s\S]*?<\/script>/gi, '').trim();
-    newHtml += '\n' + injectAuthLogic() + '\n  </head>\n';
+    newHtml += injectMetaTags(metaTagsString);
+    newHtml += '\n' + headContentCleaned;
+    newHtml += '\n' + injectAuthLogic();
+    if (securityTokenScript) {
+        newHtml += '\n    ' + securityTokenScript;
+    }
+    newHtml += '\n  </head>\n';
     newHtml += '  <body>\n';
     newHtml += bodyContent.trim() + '\n';
-    newHtml += '  ' + scriptTags.join('\n  ') + '\n';
+    newHtml += '  ' + otherScriptTags.join('\n  ') + '\n';
     newHtml += '  </body>\n';
     newHtml += injectCloseTagHandling();
 
